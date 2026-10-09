@@ -14,60 +14,95 @@ pvy = 0
 pvx = 0
 drag = False
 prev_left = False
+gameobjects = []
+class create_rect():
+    def __init__(self, x, y, w, h):
+        self.rect = pygame.Rect(x, y, w, h)
+        self.px = float(self.rect.x)
+        self.py = float(self.rect.y)
+        self.vx = 0
+        self.vy = 0
+        self.drag = False
+        self.grabbed_x = 0
+        self.grabbed_y = 0
+        self.w = w
+        self.h = h
+        gameobjects.append(self)
+
+    
+    def mouse_handler(self, mx, my, left_press, prevleft_press):
+        if self.rect.collidepoint(mx, my) and not prevleft_press and left_press:
+            self.drag = True
+            self.grabbed_x = self.px - mx
+            self.grabbed_y = self.py - my
+        elif left_press == False:
+            self.drag = False
+    
+    def phys_update(self, mx, my, bounce):
+        if self.drag:
+                new_x = min(max(mx + self.grabbed_x, 0), scr.get_width() - self.w)
+                new_y = min(max(my + self.grabbed_y, 0), scr.get_height() - self.h)
+                self.vx = new_x - self.px
+                self.vy = new_y - self.py
+                self.px, self.py = new_x, new_y
+            
+        else:
+            self.vy += g
+            self.px += self.vx
+            self.py += self.vy
+        
+            if self.py + self.h >= scr.get_height():
+                self.py = scr.get_height() - self.h
+                self.vy = -self.vy * bounce
+                if abs(self.vy) <= 2:
+                    self.vy = 0
+                self.vx *= 0.95
+            if self.px < 0:
+                self.px = 0
+                self.vx = -self.vx * 0.7
+            elif self.px + self.w > scr.get_width():
+                self.px = scr.get_width() - self.w
+                self.vx = -self.vx * 0.7
+                        
+        self.sync()
+        
+    def sync(self):
+        self.rect.x = round(self.px)
+        self.rect.y = round(self.py)
+        
+    def draw_rect(self, surface, colour):
+        pygame.draw.rect(surface, colour, self.rect)
+        
 
 pygame.display.set_caption('sim')
 font = pygame.font.Font('freesansbold.ttf', 16)
+
+box = create_rect(480, 0, 50, 50)
+box1 = create_rect(380, 0, 50, 50)
 
 while r:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             r = False
-    
-    mx, my = pygame.mouse.get_pos()
-    left, middle, right = pygame.mouse.get_pressed()
-    
-    if rect.collidepoint(mx, my) and not prev_left and left:
-        drag = True
-        grabbed_x = px - mx
-        grabbed_y = py - my
-    elif left == False:
-        drag = False
-        prev_left = left
-    
-    if drag:
-        new_x = min(max(mx + grabbed_x, 0), scr.get_width() - pw)
-        new_y = min(max(my + grabbed_y, 0), scr.get_height() - ph)
-        pvx = new_x - px
-        pvy = new_y - py
-        px, py = new_x, new_y
-    
-    else:
-        pvy += g
-        px += pvx
-        py += pvy
-
-        if py + ph >= scr.get_height():
-            py = scr.get_height() - ph
-            pvy = -pvy * 0.7
-            if abs(pvy) <= 2:
-                pvy = 0
-            pvx *= 0.95
-        if px < 0:
-            px = 0
-            pvx = -pvx * 0.7
-        elif px + pw > scr.get_width():
-            px = scr.get_width() - pw
-            pvx = -pvx * 0.7
-                
-    rect.y = round(py)
-    rect.x = round(px)
-        
-    #if mx >= (rect.x-(pw/2)) and mx <= (rect.x+(pw/2)) and my >= (rect.y-(pw/2)) and my <= (rect.y+(pw/2)) and left == True:
-        #rect.x = mx
-        #rect.y = my
-        
-    scr.fill('white')
             
+    m_x, m_y = pygame.mouse.get_pos()
+    rleft = pygame.mouse.get_pressed()[0]
+
+    for o in gameobjects:
+        o.mouse_handler(m_x, m_y, rleft, prev_left)
+    prev_left = rleft
+    
+    for o in gameobjects:
+        o.phys_update(m_x, m_y, 0.7)
+    
+    scr.fill('white')
+    
+    for o in gameobjects:
+        o.draw_rect(scr, "black")
+
+
+   
+   
     fpstext_surface = font.render(f"FPS: {round(clck.get_fps())}", True, "black")
     pvytext_surface = font.render(f"Velocity Y: {pvy:.2f}", True, "black") 
     pvxtext_surface = font.render(f"Velocity x: {pvx:.2f}", True, "black") 
@@ -81,7 +116,6 @@ while r:
     scr.blit(pvxtext_surface, pvxtext_rect)
     scr.blit(pvytext_surface, pvytext_rect)
     
-    pygame.draw.rect(scr, "black", rect)
     
     pygame.display.flip()
     clck.tick(60)
