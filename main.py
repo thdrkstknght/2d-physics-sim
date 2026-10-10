@@ -9,8 +9,10 @@ drag = False
 prev_left = False
 gameobjects = []
 class create_rect():
-    def __init__(self, x, y, w, h):
+    def __init__(self, x, y, w, h, matfriction, isstatic: bool):
         self.rect = pygame.Rect(x, y, w, h)
+        self.matfriction = matfriction
+        self.isstatic = isstatic
         self.px = float(self.rect.x)
         self.py = float(self.rect.y)
         self.vx = 0
@@ -39,7 +41,8 @@ class create_rect():
                 self.vx = new_x - self.px
                 self.vy = new_y - self.py
                 self.px, self.py = new_x, new_y
-            
+        elif self.isstatic:
+            self.sync()
         else:
             self.vy += g
             self.px += self.vx
@@ -50,7 +53,7 @@ class create_rect():
                 self.vy = -self.vy * bounce
                 if abs(self.vy) <= 2:
                     self.vy = 0
-                self.vx *= 0.95
+                self.vx *= (0.95 + self.matfriction)/2
             if self.px < 0:
                 self.px = 0
                 self.vx = -self.vx * 0.7
@@ -77,8 +80,8 @@ def collision_phys(object_dict, collision_bounce=0.5):
             if overlap_x<=0 or overlap_y<=0:
                 continue
                 
-            state_a = 0 if obj_a.drag else 1
-            state_b = 0 if obj_b.drag else 1
+            state_a = 0 if obj_a.drag or obj_a.isstatic else 1
+            state_b = 0 if obj_b.drag or obj_b.isstatic else 1
                 
             total = state_a + state_b
             if total == 0:
@@ -92,7 +95,7 @@ def collision_phys(object_dict, collision_bounce=0.5):
                 reletive_v = (obj_b.vx - obj_a.vx) * n
                 
                 if reletive_v<0:
-                    e = collision_bounce #if reletive_v<-1 else 0
+                    e = collision_bounce if reletive_v<-1 else 0
                     col_force = -(1+e) * reletive_v/total
                     obj_a.vx -= col_force * n * state_a
                     obj_b.vx += col_force * n * state_b
@@ -108,6 +111,12 @@ def collision_phys(object_dict, collision_bounce=0.5):
                     col_force = -(1+e) * reletive_v/total
                     obj_a.vy -= col_force * n * state_a
                     obj_b.vy += col_force * n * state_b
+                if n == 1:
+                    obj_a.vx *= obj_b.matfriction
+                else:
+                    obj_b.vx *= obj_a.matfriction
+                
+                    
                     
             obj_a.sync()
             obj_b.sync()
@@ -129,8 +138,8 @@ def textbox(surface, font, text: str, x, y, colour: str):
     surface.blit(srfc, rct)
     
 
-box = create_rect(480, 0, 50, 50)
-box1 = create_rect(380, 0, 50, 50)
+box = create_rect(480, 0, 50, 50, 0.9, True)
+box1 = create_rect(380, 0, 50, 50, 0.9, False)
 
 while r:
     for event in pygame.event.get():
@@ -165,7 +174,6 @@ while r:
         _xIdjanO += 15
         textbox(scr, font, f"rectv{o.n}: dx{o.vx:.1f}, dy{o.vy:.1f}", 0, _xIdjanO, "black")
         _xIdjanO +=15
-    
     
     pygame.display.flip()
     clck.tick(60)
