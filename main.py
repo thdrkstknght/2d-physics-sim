@@ -5,13 +5,6 @@ scr = pygame.display.set_mode((720, 480))
 clck = pygame.time.Clock()
 r = True
 g = 0.981
-pw = 50
-ph = 50
-rect = pygame.Rect((scr.get_width()/2), 0, pw, ph)
-py = float(rect.y)
-px = float(rect.x)
-pvy = 0
-pvx = 0
 drag = False
 prev_left = False
 gameobjects = []
@@ -28,6 +21,7 @@ class create_rect():
         self.w = w
         self.h = h
         gameobjects.append(self)
+        self.n = len(gameobjects)
 
     
     def mouse_handler(self, mx, my, left_press, prevleft_press):
@@ -67,15 +61,73 @@ class create_rect():
         self.sync()
         
     def sync(self):
-        self.rect.x = round(self.px)
-        self.rect.y = round(self.py)
-        
+            self.rect.x = round(self.px)
+            self.rect.y = round(self.py)
+            
     def draw_rect(self, surface, colour):
         pygame.draw.rect(surface, colour, self.rect)
         
-
+def collision_phys(object_dict, collision_bounce=0.5):
+    for i in range(len(object_dict)):
+        for j in range(i+1, len(object_dict)):
+            obj_a, obj_b = object_dict[i], object_dict[j]
+            overlap_x = min(obj_a.px + obj_a.w, obj_b.px + obj_b.w)-max(obj_a.px, obj_b.px)
+            overlap_y = min(obj_a.py + obj_a.h, obj_b.py + obj_b.h)-max(obj_a.py, obj_b.py)
+                
+            if overlap_x<=0 or overlap_y<=0:
+                continue
+                
+            state_a = 0 if obj_a.drag else 1
+            state_b = 0 if obj_b.drag else 1
+                
+            total = state_a + state_b
+            if total == 0:
+                continue
+                    
+            if overlap_x < overlap_y:
+                n = 1 if obj_a.px < obj_b.px else -1
+                obj_a.px -= (overlap_x * n * state_a)/total
+                obj_b.px += (overlap_x * n * state_b)/total
+                
+                reletive_v = (obj_b.vx - obj_a.vx) * n
+                
+                if reletive_v<0:
+                    e = collision_bounce #if reletive_v<-1 else 0
+                    col_force = -(1+e) * reletive_v/total
+                    obj_a.vx -= col_force * n * state_a
+                    obj_b.vx += col_force * n * state_b
+            else:
+                n = 1 if obj_a.py < obj_b.py else -1
+                obj_a.py -= (overlap_y * n * state_a)/total
+                obj_b.py += (overlap_y * n * state_b)/total
+                
+                reletive_v = (obj_b.vy - obj_a.vy) * n
+                
+                if reletive_v<0:
+                    e = collision_bounce #if reletive_v<-1 else 0
+                    col_force = -(1+e) * reletive_v/total
+                    obj_a.vy -= col_force * n * state_a
+                    obj_b.vy += col_force * n * state_b
+                    
+            obj_a.sync()
+            obj_b.sync()
+            
+def clamp_to_screen(objs):
+    w, h = scr.get_width(), scr.get_height()
+    for i in range(len(objs)):
+        objct = objs[i]
+        objct.px = min(max(objct.px, 0), w - objct.w)
+        objct.py = min(objct.py, h - objct.h)
+        objct.sync()
 pygame.display.set_caption('sim')
 font = pygame.font.Font('freesansbold.ttf', 16)
+
+def textbox(surface, font, text: str, x, y, colour: str):
+    srfc = font.render(text, True, colour)
+    rct = srfc.get_rect()
+    rct.topleft = (x, y)
+    surface.blit(srfc, rct)
+    
 
 box = create_rect(480, 0, 50, 50)
 box1 = create_rect(380, 0, 50, 50)
@@ -94,6 +146,9 @@ while r:
     
     for o in gameobjects:
         o.phys_update(m_x, m_y, 0.7)
+    for _ in range(3):
+        collision_phys(gameobjects)
+    clamp_to_screen(gameobjects)
     
     scr.fill('white')
     
@@ -103,18 +158,13 @@ while r:
 
    
    
-    fpstext_surface = font.render(f"FPS: {round(clck.get_fps())}", True, "black")
-    pvytext_surface = font.render(f"Velocity Y: {pvy:.2f}", True, "black") 
-    pvxtext_surface = font.render(f"Velocity x: {pvx:.2f}", True, "black") 
-    fpstext_rect = fpstext_surface.get_rect()
-    pvytext_rect = pvytext_surface.get_rect()
-    pvxtext_rect = pvxtext_surface.get_rect()
-    fpstext_rect.topleft = (0, 0)
-    pvxtext_rect.topleft = (0, 15)
-    pvytext_rect.topleft = (0, 30)
-    scr.blit(fpstext_surface, fpstext_rect)
-    scr.blit(pvxtext_surface, pvxtext_rect)
-    scr.blit(pvytext_surface, pvytext_rect)
+    textbox(scr, font, f"FPS: {round(clck.get_fps())}", 0, 0, "black")
+    _xIdjanO = 15
+    for o in gameobjects:
+        textbox(scr, font, f"rectp{o.n}: x{o.rect.x}, y{o.rect.y}", 0, _xIdjanO, "black")
+        _xIdjanO += 15
+        textbox(scr, font, f"rectv{o.n}: dx{o.vx:.1f}, dy{o.vy:.1f}", 0, _xIdjanO, "black")
+        _xIdjanO +=15
     
     
     pygame.display.flip()
