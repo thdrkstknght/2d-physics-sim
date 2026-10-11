@@ -1,4 +1,6 @@
 import pygame
+import time
+import random
 
 pygame.init()
 scr = pygame.display.set_mode((720, 480))
@@ -7,6 +9,7 @@ r = True
 g = 0.981
 drag = False
 prev_left = False
+prev_right = False
 gameobjects = []
 class create_rect():
     def __init__(self, x, y, w, h, matfriction, isstatic: bool):
@@ -18,6 +21,7 @@ class create_rect():
         self.vx = 0
         self.vy = 0
         self.drag = False
+        self.hud = False
         self.grabbed_x = 0
         self.grabbed_y = 0
         self.w = w
@@ -26,13 +30,15 @@ class create_rect():
         self.n = len(gameobjects)
 
     
-    def mouse_handler(self, mx, my, left_press, prevleft_press):
+    def mouse_handler(self, mx, my, left_press, prevleft_press, right_press, prevright_press):
         if self.rect.collidepoint(mx, my) and not prevleft_press and left_press:
             self.drag = True
             self.grabbed_x = self.px - mx
             self.grabbed_y = self.py - my
         elif left_press == False:
             self.drag = False
+        if self.rect.collidepoint(mx, my) and not prevright_press and right_press:
+            self.hud = not self.hud
     
     def phys_update(self, mx, my, bounce):
         if self.drag:
@@ -62,13 +68,25 @@ class create_rect():
                 self.vx = -self.vx * 0.7
                         
         self.sync()
-        
+    
+    def hud_system(self):
+        colour = "red" if self.isstatic else "black"
+        button(scr, font, "static", self.px - (self.w/2), self.py - (self.h/2), 0, 0, colour, "white", self.staticswitch ,clicked)
     def sync(self):
             self.rect.x = round(self.px)
             self.rect.y = round(self.py)
             
     def draw_rect(self, surface, colour):
+        colour = (169, 169, 169) if self.isstatic else "black"
         pygame.draw.rect(surface, colour, self.rect)
+        
+    def staticswitch(self):
+        if self.isstatic == False:
+            self.isstatic = True
+        else:
+            self.isstatic = False
+        self.vx = 0
+        self.vy = 0
         
 def collision_phys(object_dict, collision_bounce=0.5):
     for i in range(len(object_dict)):
@@ -137,21 +155,40 @@ def textbox(surface, font, text: str, x, y, colour: str):
     rct.topleft = (x, y)
     surface.blit(srfc, rct)
     
+def button(surface, font, text: str, x, y, w, h, colour_rect:str, colour_text:str, function: function, clicked):
+    srfc = font.render(text, True, colour_text)
+    rct = srfc.get_rect()
+    wn = rct.width + w
+    hn = rct.height + h
+    rect = pygame.Rect(x-(w/2), y-(h/2), wn, hn)
+    pygame.draw.rect(surface, colour_rect, rect)
+    rct.topleft = (x, y)
+    surface.blit(srfc, rct)
+    m_x, m_y = pygame.mouse.get_pos()
+    if rect.collidepoint(m_x, m_y) and clicked:
+        function()
+        
 
-box = create_rect(480, 0, 50, 50, 0.9, True)
-box1 = create_rect(380, 0, 50, 50, 0.9, False)
+
+
+
 
 while r:
+    clicked = False
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             r = False
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            clicked = True
             
     m_x, m_y = pygame.mouse.get_pos()
     rleft = pygame.mouse.get_pressed()[0]
+    rright = pygame.mouse.get_pressed()[2]
 
     for o in gameobjects:
-        o.mouse_handler(m_x, m_y, rleft, prev_left)
+        o.mouse_handler(m_x, m_y, rleft, prev_left, rright, prev_right)
     prev_left = rleft
+    prev_right = rright
     
     for o in gameobjects:
         o.phys_update(m_x, m_y, 0.7)
@@ -159,14 +196,18 @@ while r:
         collision_phys(gameobjects)
     clamp_to_screen(gameobjects)
     
+    
+    
     scr.fill('white')
+    
+    for o in gameobjects:
+        if o.hud:
+            o.hud_system()
     
     for o in gameobjects:
         o.draw_rect(scr, "black")
 
-
-   
-   
+    button(scr, font, "create rect", 0, 115, 0, 0, "black", "white", lambda: create_rect(random.randint(50, 420), 0, 50, 50, 0.9, False), clicked)
     textbox(scr, font, f"FPS: {round(clck.get_fps())}", 0, 0, "black")
     _xIdjanO = 15
     for o in gameobjects:
@@ -174,6 +215,6 @@ while r:
         _xIdjanO += 15
         textbox(scr, font, f"rectv{o.n}: dx{o.vx:.1f}, dy{o.vy:.1f}", 0, _xIdjanO, "black")
         _xIdjanO +=15
-    
+        
     pygame.display.flip()
     clck.tick(60)
