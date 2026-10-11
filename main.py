@@ -197,7 +197,7 @@ while r:
     clamp_to_screen(gameobjects)
     
     
-    
+    /
     scr.fill('white')
     
     for o in gameobjects:
