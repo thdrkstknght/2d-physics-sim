@@ -155,7 +155,7 @@ def textbox(surface, font, text: str, x, y, colour: str):
     rct.topleft = (x, y)
     surface.blit(srfc, rct)
     
-def button(surface, font, text: str, x, y, w, h, colour_rect:str, colour_text:str, function: function, clicked):
+def button(surface, font, text: str, x, y, w, h, colour_rect:str, colour_text:str, function, clicked):
     srfc = font.render(text, True, colour_text)
     rct = srfc.get_rect()
     wn = rct.width + w
@@ -169,9 +169,39 @@ def button(surface, font, text: str, x, y, w, h, colour_rect:str, colour_text:st
         function()
         
 
+class inp_textbox:
+    def __init__(self, x, y, w, h):
+        self.rect = pygame.Rect(x, y, w, h)
+        self.usertext = ""
+        self.selected = False
+    
+    def box_handler(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            self.selected = self.rect.collidepoint(event.pos)
+        elif event.type == pygame.KEYDOWN and self.selected:
+            if event.key == pygame.K_RETURN:
+                submited = self.usertext
+                self.usertext = ""
+                return submited
+            elif event.key == pygame.K_BACKSPACE:
+                self.usertext = self.usertext[:-1]
+            else:
+                self.usertext += event.unicode
+        return None
+    
+    def draw_box(self, active_colour, deactive_colour, background_colour, text_colour, surface):
+        border = active_colour if self.selected else deactive_colour
+        pygame.draw.rect(surface, background_colour, self.rect)
+        pygame.draw.rect(surface, border, self.rect, 1)
+        srfc = font.render(self.usertext, True, text_colour)
+        surface.set_clip(self.rect.inflate(-8, -4))
+        surface.blit(srfc, (self.rect.x + 6, self.rect.y + (self.rect.height - srfc.get_height()) // 2))
+        surface.set_clip(None)
 
 
-
+box = inp_textbox(0, 140, 100, 16)
+box_submitted = ""
+subm = "50 50"
 
 while r:
     clicked = False
@@ -180,6 +210,9 @@ while r:
             r = False
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             clicked = True
+        box_submitted = box.box_handler(event)
+        if box_submitted is not None:
+            subm = box_submitted
             
     m_x, m_y = pygame.mouse.get_pos()
     rleft = pygame.mouse.get_pressed()[0]
@@ -197,8 +230,10 @@ while r:
     clamp_to_screen(gameobjects)
     
     
-    /
+    
     scr.fill('white')
+    
+    box.draw_box("red", "black", "white", "black", scr)
     
     for o in gameobjects:
         if o.hud:
@@ -206,8 +241,8 @@ while r:
     
     for o in gameobjects:
         o.draw_rect(scr, "black")
-
-    button(scr, font, "create rect", 0, 115, 0, 0, "black", "white", lambda: create_rect(random.randint(50, 420), 0, 50, 50, 0.9, False), clicked)
+    gw, gh = map(int, subm.split())
+    button(scr, font, "create rect", 0, 115, 0, 0, "black", "white", lambda: create_rect(random.randint(50, 420), 0, gw, gh, 0.9, False), clicked)
     textbox(scr, font, f"FPS: {round(clck.get_fps())}", 0, 0, "black")
     _xIdjanO = 15
     for o in gameobjects:
