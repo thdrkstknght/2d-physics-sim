@@ -71,7 +71,7 @@ class create_rect():
     
     def hud_system(self):
         colour = "red" if self.isstatic else "black"
-        button(scr, font, "static", self.px - (self.w/2), self.py - (self.h/2), 0, 0, colour, "white", self.staticswitch ,clicked)
+        button(scr, font, "static", self.px + (self.w/2), self.py - (self.h/2), 0, 0, colour, "white", self.staticswitch ,clicked)
     def sync(self):
             self.rect.x = round(self.px)
             self.rect.y = round(self.py)
@@ -134,8 +134,6 @@ def collision_phys(object_dict, collision_bounce=0.5):
                 else:
                     obj_b.vx *= obj_a.matfriction
                 
-                    
-                    
             obj_a.sync()
             obj_b.sync()
             
@@ -199,7 +197,7 @@ class inp_textbox:
         surface.set_clip(None)
 
 
-box = inp_textbox(0, 140, 100, 16)
+box = inp_textbox(620, 20, 100, 16)
 box_submitted = ""
 subm = "50 50"
 
@@ -226,7 +224,7 @@ while r:
     for o in gameobjects:
         o.phys_update(m_x, m_y, 0.7)
     for _ in range(3):
-        collision_phys(gameobjects)
+        collision_phys(gameobjects, 1)
     clamp_to_screen(gameobjects)
     
     
@@ -242,7 +240,7 @@ while r:
     for o in gameobjects:
         o.draw_rect(scr, "black")
     gw, gh = map(int, subm.split())
-    button(scr, font, "create rect", 0, 115, 0, 0, "black", "white", lambda: create_rect(random.randint(50, 420), 0, gw, gh, 0.9, False), clicked)
+    button(scr, font, "create rect", 630, 0, 0, 0, "black", "white", lambda: create_rect(random.randint(50, 420), 0, gw, gh, 0.9, False), clicked)
     textbox(scr, font, f"FPS: {round(clck.get_fps())}", 0, 0, "black")
     _xIdjanO = 15
     for o in gameobjects:
