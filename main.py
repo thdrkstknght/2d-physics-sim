@@ -12,8 +12,9 @@ prev_left = False
 prev_right = False
 gameobjects = []
 class create_rect():
-    def __init__(self, x, y, w, h, matfriction, isstatic: bool):
+    def __init__(self, x, y, w, h, matfriction, mass, isstatic: bool):
         self.rect = pygame.Rect(x, y, w, h)
+        self.mass = mass
         self.matfriction = matfriction
         self.isstatic = isstatic
         self.px = float(self.rect.x)
@@ -59,7 +60,7 @@ class create_rect():
                 self.vy = -self.vy * bounce
                 if abs(self.vy) <= 2:
                     self.vy = 0
-                self.vx *= (0.95 + self.matfriction)/2
+                self.vx *= ((0.95 + self.matfriction)/2)
             if self.px < 0:
                 self.px = 0
                 self.vx = -self.vx * 0.7
@@ -87,7 +88,6 @@ class create_rect():
             self.isstatic = False
         self.vx = 0
         self.vy = 0
-        
 def collision_phys(object_dict, collision_bounce=0.5):
     for i in range(len(object_dict)):
         for j in range(i+1, len(object_dict)):
@@ -98,8 +98,8 @@ def collision_phys(object_dict, collision_bounce=0.5):
             if overlap_x<=0 or overlap_y<=0:
                 continue
                 
-            state_a = 0 if obj_a.drag or obj_a.isstatic else 1
-            state_b = 0 if obj_b.drag or obj_b.isstatic else 1
+            state_a = 0 if obj_a.drag or obj_a.isstatic else 1 / obj_a.mass
+            state_b = 0 if obj_b.drag or obj_b.isstatic else 1 / obj_b.mass
                 
             total = state_a + state_b
             if total == 0:
@@ -125,7 +125,7 @@ def collision_phys(object_dict, collision_bounce=0.5):
                 reletive_v = (obj_b.vy - obj_a.vy) * n
                 
                 if reletive_v<0:
-                    e = collision_bounce #if reletive_v<-1 else 0
+                    e = collision_bounce if reletive_v<-1 else 0
                     col_force = -(1+e) * reletive_v/total
                     obj_a.vy -= col_force * n * state_a
                     obj_b.vy += col_force * n * state_b
@@ -199,7 +199,8 @@ class inp_textbox:
 
 box = inp_textbox(620, 20, 100, 16)
 box_submitted = ""
-subm = "50 50"
+gw, gh, m = 50, 50, 1
+subm = ""
 
 while r:
     clicked = False
@@ -210,8 +211,12 @@ while r:
             clicked = True
         box_submitted = box.box_handler(event)
         if box_submitted is not None:
-            subm = box_submitted
-            
+            try:
+                gw, gh, m = map(int, box_submitted.split())
+            except ValueError:
+                pass
+    
+        
     m_x, m_y = pygame.mouse.get_pos()
     rleft = pygame.mouse.get_pressed()[0]
     rright = pygame.mouse.get_pressed()[2]
@@ -224,9 +229,8 @@ while r:
     for o in gameobjects:
         o.phys_update(m_x, m_y, 0.7)
     for _ in range(3):
-        collision_phys(gameobjects, 1)
+        collision_phys(gameobjects, 0.5)
     clamp_to_screen(gameobjects)
-    
     
     
     scr.fill('white')
@@ -239,8 +243,8 @@ while r:
     
     for o in gameobjects:
         o.draw_rect(scr, "black")
-    gw, gh = map(int, subm.split())
-    button(scr, font, "create rect", 630, 0, 0, 0, "black", "white", lambda: create_rect(random.randint(50, 420), 0, gw, gh, 0.9, False), clicked)
+    
+    button(scr, font, "create rect", 630, 0, 0, 0, "black", "white", lambda: create_rect(random.randint(50, 420), 0, gw, gh, 0.9, m, False), clicked)
     textbox(scr, font, f"FPS: {round(clck.get_fps())}", 0, 0, "black")
     _xIdjanO = 15
     for o in gameobjects:
